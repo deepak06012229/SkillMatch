@@ -84,6 +84,7 @@ class ProfileOut(BaseModel):
     preferred_opportunity_types: List[str]
     preferred_locations: List[str]
     readiness_score: int
+    name: Optional[str] = None
     # Frontend compatibility helper aliases
     readinessScore: Optional[int] = None
     careerPreferences: Optional[Dict[str, Any]] = None

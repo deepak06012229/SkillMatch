@@ -42,6 +42,7 @@ def get_student_profile(db: Session, user: User) -> Dict[str, Any]:
         "preferred_opportunity_types": profile.preferred_opportunity_types or ["internships", "hackathons", "projects"],
         "preferred_locations": profile.preferred_locations or ["Bangalore", "Remote", "Hybrid"],
         "readiness_score": profile.readiness_score,
+        "name": user.full_name,
         # Frontend compatibility helpers
         "readinessScore": profile.readiness_score,
         "careerPreferences": {

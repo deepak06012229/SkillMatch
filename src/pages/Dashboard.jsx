@@ -40,7 +40,7 @@ export default function Dashboard() {
             <span className="material-symbols-outlined text-[18px]">verified</span>
             <span>SkillMatch Intelligence Hub</span>
           </div>
-          <h1 className="text-headline-xl text-on-surface">Good morning, {studentProfile.name.split(" ")[0]}</h1>
+          <h1 className="text-headline-xl text-on-surface">Good morning, {(studentProfile?.name || studentProfile?.full_name || "Deepraj").split(" ")[0]}</h1>
           <p className="text-body-lg text-on-surface-variant max-w-2xl">
             Here are the opportunities and skill actions that matter most right now.
           </p>

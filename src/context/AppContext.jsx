@@ -88,9 +88,10 @@ export function AppProvider({ children }) {
   // INITIAL BACKEND HYDRATION
   const refreshBackendData = async () => {
     try {
-      // 1. Fetch Profile
       const prof = await api.getProfile().catch(() => null);
       if (prof) {
+        prof.name = prof.name || prof.full_name || "Deepraj Roy";
+        prof.full_name = prof.full_name || prof.name || "Deepraj Roy";
         setStudentProfile(prof);
       }
 
