@@ -6,8 +6,8 @@ export default function StudentProfile() {
   const [isEditing, setIsEditing] = useState(false);
 
   const getNormalizedProfile = (sp) => ({
-    name: sp?.name || "Deepraj Roy",
-    initials: sp?.initials || (sp?.name ? sp.name.split(" ").map((n) => n[0]).join("") : "DR"),
+    name: sp?.name || sp?.full_name || "Deepraj Roy",
+    initials: sp?.initials || (sp?.name ? sp.name.split(" ").map((n) => n[0]).join("") : (sp?.full_name ? sp.full_name.split(" ").map((n) => n[0]).join("") : "DR")),
     title: sp?.title || "Undergraduate CS Student & Aspiring AI Engineer",
     email: sp?.email || "deepraj.roy@university.edu",
     phone: sp?.phone || "+91 98765 43210",
@@ -20,13 +20,42 @@ export default function StudentProfile() {
       cgpa: sp?.cgpa || sp?.academic?.cgpa || 8.8,
       year: sp?.academic_year || sp?.academic?.year || "3rd Year (Junior)",
       graduationYear: sp?.graduation_year || sp?.academic?.graduationYear || 2026,
+      keyCourses: sp?.academic?.keyCourses || sp?.key_courses || [
+        "Machine Learning", "Data Structures", "Cloud Computing", "NLP", "Computer Vision"
+      ],
     },
     careerPreferences: {
       primaryGoal: sp?.target_role || sp?.careerPreferences?.primaryGoal || "AI/ML Internship",
       remotePreference: sp?.workplace_preference || sp?.careerPreferences?.remotePreference || "Hybrid",
       targetRoles: sp?.career_goals || sp?.careerPreferences?.targetRoles || ["AI/ML Engineer", "Data Scientist"],
-      preferredOpportunityTypes: sp?.preferred_opportunity_types || ["internships", "hackathons", "projects"],
+      preferredOpportunityTypes: sp?.preferred_opportunity_types || sp?.careerPreferences?.preferredOpportunityTypes || ["internships", "hackathons", "projects"],
+      preferredLocation: sp?.careerPreferences?.preferredLocation || sp?.location || "Bangalore, India",
     },
+    projects: sp?.projects || sp?.careerPreferences?.projects || [
+      {
+        id: "proj-1",
+        title: "AI Resume Parser",
+        description: "NLP-based resume parser using SpaCy and BERT models to extract structured data.",
+        technologies: ["Python", "SpaCy", "BERT", "FastAPI"],
+        verified: true,
+        githubUrl: "#",
+      },
+      {
+        id: "proj-2",
+        title: "SkillMatch Platform",
+        description: "Full-stack platform matching students to opportunities using hybrid ML + rules engine.",
+        technologies: ["React", "FastAPI", "TF-IDF", "SQLite"],
+        verified: true,
+        githubUrl: "#",
+      },
+    ],
+    certifications: sp?.certifications || [
+      { id: "cert-1", name: "Google Cloud ML Specialization", issuer: "Google Cloud", credentialId: "GC-ML-2025" },
+      { id: "cert-2", name: "Deep Learning Specialization", issuer: "Coursera / deeplearning.ai", credentialId: "DL-AI-2025" },
+    ],
+    interests: sp?.interests || sp?.field_interests || [
+      "Artificial Intelligence", "Machine Learning", "NLP", "Cloud Computing", "Open Source"
+    ],
   });
 
   const [profileData, setProfileData] = useState(() => getNormalizedProfile(studentProfile));
