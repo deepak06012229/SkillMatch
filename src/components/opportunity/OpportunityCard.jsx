@@ -69,7 +69,7 @@ export default function OpportunityCard({ opp }) {
               {opp.compensation}
             </span>
           )}
-          {opp.requiredSkills.slice(0, 2).map((skill) => (
+          {(opp.requiredSkills || []).slice(0, 2).map((skill) => (
             <span 
               key={skill}
               className="px-unit-sm py-unit-xs rounded bg-surface-container-low text-on-surface-variant text-label-sm"
@@ -77,7 +77,7 @@ export default function OpportunityCard({ opp }) {
               {skill}
             </span>
           ))}
-          {opp.requiredSkills.length > 2 && (
+          {(opp.requiredSkills || []).length > 2 && (
             <span className="px-unit-sm py-unit-xs rounded bg-surface-container-low text-outline text-label-sm">
               +{opp.requiredSkills.length - 2}
             </span>
@@ -86,11 +86,10 @@ export default function OpportunityCard({ opp }) {
       </div>
 
       {/* Card Footer: Deadline, Save, Quick Apply */}
-      <div className="flex items-center justify-between pt-unit-md border-t border-surface-container-high/80">
-        <span className="text-label-sm text-error flex items-center gap-1 font-medium">
-          <span className="material-symbols-outlined text-[15px]">schedule</span>
-          <span>Closes in {opp.deadlineDays} days</span>
-        </span>
+      <div className="flex items-center justify-between pt-unit-md border-t border-surface-container-high/80">          <span className="text-label-sm text-error flex items-center gap-1 font-medium">
+            <span className="material-symbols-outlined text-[15px]">schedule</span>
+            <span>{opp.deadlineDays > 0 ? `Closes in ${opp.deadlineDays} days` : "Deadline passed"}</span>
+          </span>
 
         <div className="flex items-center gap-unit-sm">
           <button

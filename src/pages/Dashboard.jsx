@@ -15,7 +15,12 @@ export default function Dashboard() {
 
   const [quickFilter, setQuickFilter] = useState("all");
 
-  const currentWeekData = (roadmapWeeks && (roadmapWeeks.find((w) => w.status === "current" || w.current) || roadmapWeeks[6] || roadmapWeeks[0])) || {};
+  const roadmapList = Array.isArray(roadmapWeeks) ? roadmapWeeks : [];
+  let currentWeekIndex = roadmapList.findIndex(
+    (w) => w.status === "current" || w.current
+  );
+  if (currentWeekIndex === -1) currentWeekIndex = Math.min(6, Math.max(0, roadmapList.length - 1));
+  const currentWeekData = roadmapList[currentWeekIndex] || {};
 
   // Opportunities for Dashboard grid
   const recommendedOpps = (opportunities || []).filter((opp) => {
@@ -75,13 +80,13 @@ export default function Dashboard() {
                 <span>Profile Readiness</span>
               </h2>
               <span className="text-headline-sm text-primary font-bold">
-                {studentProfile.readiness_score || studentProfile.readinessScore || 86}%
+                {studentProfile?.readiness_score || studentProfile?.readinessScore || 86}%
               </span>
             </div>
             <div className="w-full bg-surface-container-high h-2 rounded-full overflow-hidden mb-unit-md">
               <div
                 className="bg-primary h-full rounded-full transition-all duration-1000"
-                style={{ width: `${studentProfile.readiness_score || studentProfile.readinessScore || 86}%` }}
+                style={{ width: `${studentProfile?.readiness_score || studentProfile?.readinessScore || 86}%` }}
               ></div>
             </div>
             <div className="mb-unit-md">
@@ -213,7 +218,7 @@ export default function Dashboard() {
               {currentWeekData.checklist?.slice(0, 2).map((item) => (
                 <div
                   key={item.id}
-                  onClick={() => toggleChecklist(6, item.id)}
+                  onClick={() => toggleChecklist(currentWeekIndex, item.id)}
                   className="flex items-center justify-between p-2 rounded-xl bg-surface-container-low hover:bg-surface-container-high transition-colors text-body-sm text-on-surface cursor-pointer select-none"
                 >
                   <span className="flex items-center gap-2">
@@ -278,6 +283,14 @@ export default function Dashboard() {
             <OpportunityCard key={opp.id} opp={opp} />
           ))}
         </div>
+
+        {recommendedOpps.length === 0 && (
+          <div className="bg-surface-container-lowest p-unit-2xl rounded-2xl border border-surface-container-high text-center space-y-unit-md">
+            <span className="material-symbols-outlined text-[48px] text-outline">inbox</span>
+            <h3 className="text-headline-sm text-on-surface">No opportunities in this filter yet</h3>
+            <p className="text-body-md text-on-surface-variant">Try another category to keep exploring.</p>
+          </div>
+        )}
 
         {/* Bottom Discover CTA */}
         <div className="pt-unit-md flex justify-center">

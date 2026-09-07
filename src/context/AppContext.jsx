@@ -5,22 +5,64 @@ import { STUDENT_PROFILE, SAMPLE_EXTRACTED_RESUME } from "../data/students";
 import { VERIFIED_SKILLS, SKILL_GAPS, RECOMMENDED_PROJECTS } from "../data/skills";
 import { INITIAL_APPLICATIONS } from "../data/applications";
 import { ROADMAP_GOAL, ROADMAP_WEEKS } from "../data/roadmapData";
+import {
+  buildStudentContext,
+  normalizeOpportunityCard,
+  normalizeMatch,
+  normalizeStudentSkill,
+  normalizeSkillGap,
+  normalizeRecommendedProject,
+  normalizeRoadmap,
+  normalizeApplication,
+  resolveWeekNumber,
+} from "../api/normalize";
 
 const AppContext = createContext();
+
+const AUTH_STORAGE_KEY = "skillmatch_user";
+const SERVER_UNAVAILABLE = /(failed to fetch|load failed|networkerror|http error 5\d\d)/i;
+
+const loadStoredUser = () => {
+  try {
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return parsed && parsed.email ? parsed : null;
+  } catch (_) {
+    return null;
+  }
+};
+
+// Local workspace user used when the auth backend is unreachable,
+// so the app remains fully usable on any device / offline preview.
+const buildLocalUser = (email, fullName) => {
+  const derived = String(email || "Student")
+    .split("@")[0]
+    .replace(/[._-]+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return {
+    id: `local-${Date.now()}`,
+    email: email || "student@university.edu",
+    full_name: fullName || derived || "Student",
+    role: "student",
+    auth_provider: "local-demo",
+  };
+};
 
 export function AppProvider({ children }) {
   // Navigation
   const [currentRoute, setCurrentRoute] = useState("dashboard");
   const [selectedOpportunityId, setSelectedOpportunityId] = useState("opp-1");
 
-  // Authentication
-  const [currentUser, setCurrentUser] = useState({
-    id: "student-1",
-    email: "deepraj.roy@university.edu",
-    full_name: "Deepraj Roy",
-    role: "student",
-    auth_provider: "local",
-  });
+  // Authentication (restores persisted session so sign-in survives refresh)
+  const [currentUser, setCurrentUser] = useState(loadStoredUser);
+
+  const persistUser = (user) => {
+    try {
+      if (user) localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+      else localStorage.removeItem(AUTH_STORAGE_KEY);
+    } catch (_) {}
+  };
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // Opportunities & Filters
@@ -85,62 +127,80 @@ export function AppProvider({ children }) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // INITIAL BACKEND HYDRATION
+  // INITIAL BACKEND HYDRATION — every payload passes through the normalizer
+  // adapter so live backend data can never crash or blank out a page.
   const refreshBackendData = async () => {
     try {
+      // 0. Authenticated student identity (for newly registered accounts)
+      try {
+        const me = await api.getMe();
+        if (me && me.email) {
+          setCurrentUser((u) => ({ ...(u || {}), ...me }));
+          persistUser({ ...(currentUser || {}), ...me });
+        }
+      } catch (_) {}
+
+      // 1. Student skills first — used as matching context for everything else
+      let ctx = buildStudentContext(skillsData, studentProfile);
+      const skills = await api.getMySkills().catch(() => null);
+      if (Array.isArray(skills) && skills.length > 0) {
+        const normalizedSkills = skills.map(normalizeStudentSkill);
+        setSkillsData(normalizedSkills);
+        ctx = buildStudentContext(normalizedSkills, studentProfile);
+      }
+
+      // 2. Profile
       const prof = await api.getProfile().catch(() => null);
       if (prof) {
-        prof.name = prof.name || prof.full_name || "Deepraj Roy";
-        prof.full_name = prof.full_name || prof.name || "Deepraj Roy";
+        prof.name = prof.name || prof.full_name || "Student";
+        prof.full_name = prof.full_name || prof.name || "Student";
         setStudentProfile(prof);
+        ctx = buildStudentContext(skillsData, prof);
       }
 
-      // 2. Fetch Opportunities
-      const opps = await api.getOpportunities().catch(() => null);
-      if (opps && opps.length > 0) {
-        setOpportunities(opps);
-      }
-
-      // 3. Fetch Matches
+      // 3. Matches (server-computed fit scores — richest source)
       const matches = await api.getMatches({ min_fit: 40 }).catch(() => null);
-      if (matches && matches.length > 0) {
-        setMatchesList(matches);
+      if (Array.isArray(matches) && matches.length > 0) {
+        setMatchesList(matches.map((m) => normalizeMatch(m, ctx)));
       }
 
-      // 4. Fetch Skills
-      const skills = await api.getMySkills().catch(() => null);
-      if (skills && skills.length > 0) {
-        setSkillsData(skills);
+      // 4. Opportunities (cards get client-side derived fit when missing)
+      const opps = await api.getOpportunities().catch(() => null);
+      if (Array.isArray(opps) && opps.length > 0) {
+        setOpportunities(opps.map((o) => normalizeOpportunityCard(o, ctx)));
       }
 
-      // 5. Fetch Skill Gaps
+      // 5. Skill Gaps + recommendations
       const gapsRes = await api.getSkillGaps().catch(() => null);
       if (gapsRes) {
-        if (gapsRes.gaps) setSkillGapsData(gapsRes.gaps);
-        if (gapsRes.courses) setRecommendedCourses(gapsRes.courses);
-        if (gapsRes.projects) setRecommendedProjects(gapsRes.projects);
+        if (Array.isArray(gapsRes.gaps)) {
+          setSkillGapsData(
+            gapsRes.gaps.map((g) => normalizeSkillGap(g, gapsRes.targetRole))
+          );
+        }
+        if (Array.isArray(gapsRes.courses)) setRecommendedCourses(gapsRes.courses);
+        if (Array.isArray(gapsRes.projects)) {
+          setRecommendedProjects(gapsRes.projects.map(normalizeRecommendedProject));
+        }
       }
 
-      // 6. Fetch Roadmap
+      // 6. Roadmap
       const road = await api.getRoadmap().catch(() => null);
       if (road) {
-        setRoadmapGoal({
-          title: road.title,
-          badge: road.badge,
-          description: road.description,
-        });
-        if (road.weeks) setRoadmapWeeks(road.weeks);
+        const { goal, weeks } = normalizeRoadmap(road);
+        setRoadmapGoal((prev) => ({ ...prev, ...goal }));
+        if (weeks.length > 0) setRoadmapWeeks(weeks);
       }
 
-      // 7. Fetch Applications
+      // 7. Applications
       const apps = await api.getApplications().catch(() => null);
-      if (apps) {
-        setApplications(apps);
+      if (Array.isArray(apps)) {
+        setApplications(apps.map(normalizeApplication));
       }
 
-      // 8. Fetch Saved
+      // 8. Saved
       const saved = await api.getSaved().catch(() => null);
-      if (saved && saved.saved_ids) {
+      if (saved && Array.isArray(saved.saved_ids)) {
         setSavedIds(new Set(saved.saved_ids));
       }
     } catch (e) {
@@ -152,31 +212,66 @@ export function AppProvider({ children }) {
     refreshBackendData();
   }, []);
 
-  // AUTH ACTIONS
+  // AUTH ACTIONS — real backend first, graceful local-demo fallback when offline
   const login = async (email, password) => {
-    const res = await api.login({ email, password });
-    setCurrentUser(res.user);
-    await refreshBackendData();
-    return res;
+    try {
+      const res = await api.login({ email, password });
+      setCurrentUser(res.user);
+      persistUser(res.user);
+      await refreshBackendData();
+      return res;
+    } catch (err) {
+      if (!SERVER_UNAVAILABLE.test(err.message || "")) throw err;
+      const user = buildLocalUser(email);
+      setCurrentUser(user);
+      persistUser(user);
+      addToast("Auth server unreachable — signed in to local demo workspace", "info");
+      await refreshBackendData();
+      return { user };
+    }
   };
 
   const register = async (data) => {
-    const res = await api.register(data);
-    setCurrentUser(res.user);
-    await refreshBackendData();
-    return res;
+    try {
+      const res = await api.register(data);
+      setCurrentUser(res.user);
+      persistUser(res.user);
+      await refreshBackendData();
+      return res;
+    } catch (err) {
+      if (!SERVER_UNAVAILABLE.test(err.message || "")) throw err;
+      const user = buildLocalUser(data.email, data.full_name);
+      setCurrentUser(user);
+      persistUser(user);
+      addToast("Auth server unreachable — account created in local demo workspace", "info");
+      await refreshBackendData();
+      return { user };
+    }
   };
 
   const googleAuth = async (data) => {
-    const res = await api.googleAuth(data);
-    setCurrentUser(res.user);
-    await refreshBackendData();
-    return res;
+    try {
+      const res = await api.googleAuth(data);
+      setCurrentUser(res.user);
+      persistUser(res.user);
+      await refreshBackendData();
+      return res;
+    } catch (err) {
+      if (!SERVER_UNAVAILABLE.test(err.message || "")) throw err;
+      const user = buildLocalUser(data.email, data.name);
+      setCurrentUser(user);
+      persistUser(user);
+      addToast("Auth server unreachable — signed in to local demo workspace", "info");
+      await refreshBackendData();
+      return { user };
+    }
   };
 
   const logout = () => {
     api.setToken(null);
     setCurrentUser(null);
+    persistUser(null);
+    setCurrentRoute("dashboard");
     addToast("Signed out", "info");
   };
 
@@ -267,11 +362,12 @@ export function AppProvider({ children }) {
 
   // Toggle checklist item in roadmap (Dynamically updates progress and Profile Readiness!)
   const toggleChecklist = async (weekIdx, checkId) => {
-    const weekObj = roadmapWeeks[weekIdx];
-    const weekNum = weekObj ? weekObj.week : weekIdx + 1;
+    const weekObj = Array.isArray(roadmapWeeks) ? roadmapWeeks[weekIdx] : null;
+    const weekNum = resolveWeekNumber(weekObj, weekIdx);
 
     // Optimistic update
     setRoadmapWeeks((prev) => {
+      if (!Array.isArray(prev) || !prev[weekIdx]) return prev;
       const copy = [...prev];
       const week = { ...copy[weekIdx] };
       if (week.checklist) {

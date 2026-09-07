@@ -13,9 +13,13 @@ import ProjectRecommendations from "./pages/ProjectRecommendations";
 import ApplicationTracker from "./pages/ApplicationTracker";
 import StudentProfile from "./pages/StudentProfile";
 import Saved from "./pages/Saved";
+import AuthPage from "./pages/AuthPage";
 
 function AppContent() {
-  const { currentRoute } = useApp();
+  const { currentUser, currentRoute } = useApp();
+
+  // Dedicated login / register experience for signed-out users
+  if (!currentUser) return <AuthPage />;
 
   const renderCurrentPage = () => {
     switch (currentRoute) {

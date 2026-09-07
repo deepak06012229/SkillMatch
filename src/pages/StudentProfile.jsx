@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useApp } from "../context/AppContext";
+import { api } from "../api/client";
 
 export default function StudentProfile() {
   const { studentProfile, setStudentProfile, setIsResumeModalOpen, addToast } = useApp();
@@ -69,7 +70,6 @@ export default function StudentProfile() {
     setStudentProfile(profileData);
     setIsEditing(false);
     try {
-      const { api } = await import("../api/client");
       await api.updateProfile({
         title: profileData.title,
         phone: profileData.phone,

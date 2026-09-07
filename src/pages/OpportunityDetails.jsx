@@ -115,14 +115,14 @@ export default function OpportunityDetails() {
             <div>
               <h3 className="font-headline-sm text-on-surface mb-unit-sm">Role Overview</h3>
               <p className="text-body-lg text-on-surface-variant leading-relaxed">
-                {opp.detailedDescription}
+                {opp.detailedDescription || opp.overview || opp.description}
               </p>
             </div>
 
             <div className="border-t border-surface-container-high pt-unit-lg">
               <h3 className="font-headline-sm text-on-surface mb-unit-sm">Required Qualifications & Skills</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-unit-md mt-unit-sm">
-                {opp.requiredSkills.map((skill) => {
+                {(opp.requiredSkills || []).map((skill) => {
                   const isMatched = opp.matchedSkills?.includes(skill);
                   return (
                     <div
@@ -151,7 +151,7 @@ export default function OpportunityDetails() {
             <div className="border-t border-surface-container-high pt-unit-lg">
               <h3 className="font-headline-sm text-on-surface mb-unit-sm">Academic Year Eligibility</h3>
               <div className="flex flex-wrap gap-unit-xs">
-                {opp.academicEligibility.map((year) => (
+                {(opp.academicEligibility || []).map((year) => (
                   <span key={year} className="bg-secondary-container text-on-secondary-container px-3 py-1 rounded-lg text-body-sm font-medium">
                     ✓ {year}
                   </span>
@@ -206,11 +206,11 @@ export default function OpportunityDetails() {
             <div className="grid grid-cols-2 gap-2 pt-3 border-t border-surface-container-high">
               <div className="bg-surface-container-low p-2.5 rounded-xl text-center">
                 <div className="text-label-sm text-outline">Candidate Readiness</div>
-                <div className="text-headline-sm text-[18px] font-bold text-on-surface">{opp.readinessScore}%</div>
+                <div className="text-headline-sm text-[18px] font-bold text-on-surface">{opp.readinessScore || 80}%</div>
               </div>
               <div className="bg-surface-container-low p-2.5 rounded-xl text-center">
                 <div className="text-label-sm text-outline">Opportunity Trust</div>
-                <div className="text-headline-sm text-[18px] font-bold text-primary">{opp.trustScore}%</div>
+                <div className="text-headline-sm text-[18px] font-bold text-primary">{opp.trustScore || 90}%</div>
               </div>
             </div>
 

@@ -2,16 +2,16 @@ import React, { useState } from "react";
 import { useApp } from "../context/AppContext";
 
 export default function Matches() {
-  const { opportunities, setFitScoreModalData, applyToOpportunity, viewOpportunityDetails, toggleSave, savedIds } = useApp();
+  const { matchesList, setFitScoreModalData, applyToOpportunity, viewOpportunityDetails, toggleSave, savedIds } = useApp();
   const [selectedFilter, setSelectedFilter] = useState("all");
 
-  const highMatches = opportunities
-    .filter((opp) => opp.fitScore >= 80)
-    .sort((a, b) => b.fitScore - a.fitScore);
+  const highMatches = (matchesList || [])
+    .filter((opp) => (Number(opp?.fitScore) || 0) >= 80)
+    .sort((a, b) => (Number(b?.fitScore) || 0) - (Number(a?.fitScore) || 0));
 
   const filteredMatches = highMatches.filter((opp) => {
     if (selectedFilter === "all") return true;
-    if (selectedFilter === "high90") return opp.fitScore >= 90;
+    if (selectedFilter === "high90") return (opp.fitScore || 0) >= 90;
     if (selectedFilter === "internships") return opp.category === "internships";
     if (selectedFilter === "verified") return opp.verified;
     return true;
@@ -65,7 +65,16 @@ export default function Matches() {
 
       {/* Match Cards List with Expanded Visual Breakdown */}
       <div className="space-y-unit-lg">
-        {filteredMatches.map((opp) => {
+        {filteredMatches.length === 0 ? (
+          <div className="bg-surface-container-lowest p-unit-2xl rounded-2xl border border-surface-container-high text-center space-y-unit-md">
+            <span className="material-symbols-outlined text-[48px] text-outline">handshake</span>
+            <h3 className="text-headline-sm text-on-surface">No matches above 80% fit yet</h3>
+            <p className="text-body-md text-on-surface-variant max-w-md mx-auto">
+              Verify more skills in your Skill Profile or sync your resume to unlock higher-confidence matches.
+            </p>
+          </div>
+        ) : (
+        filteredMatches.map((opp) => {
           const isSaved = savedIds.has(opp.id);
           const breakdown = opp.fitBreakdown || {
             skills: 90,
@@ -209,7 +218,8 @@ export default function Matches() {
               </div>
             </div>
           );
-        })}
+        })
+        )}
       </div>
     </div>
   );
